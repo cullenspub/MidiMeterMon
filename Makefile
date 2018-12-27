@@ -22,6 +22,7 @@ examples: dgl
 	$(MAKE) all -C examples/MidiThrough
 	$(MAKE) all -C examples/Parameters
 	$(MAKE) all -C examples/States
+	$(MAKE) all -C examples/MidiMeterMon
 
 ifneq ($(CROSS_COMPILING),true)
 gen: examples utils/lv2_ttl_generator
@@ -46,6 +47,7 @@ clean:
 	$(MAKE) clean -C examples/MidiThrough
 	$(MAKE) clean -C examples/Parameters
 	$(MAKE) clean -C examples/States
+	$(MAKE) clean -C examples/MidiMeterMon
 	$(MAKE) clean -C utils/lv2-ttl-generator
 	rm -rf bin build
 
