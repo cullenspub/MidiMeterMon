@@ -30,10 +30,10 @@ static const float kSmoothMultiplier = 3.0f;
 
 // -----------------------------------------------------------------------------------------------------------
 
-class ExampleUIMeters : public UI
+class MidiMeterMonUI : public UI
 {
 public:
-    ExampleUIMeters()
+    MidiMeterMonUI()
         : UI(128, 512, true),
           // default color is green
           fColor(93, 231, 61),
@@ -57,11 +57,7 @@ protected:
     {
         switch (index)
         {
-        case 0: // color
-            updateColor(std::round(value));
-            break;
-
-        case 1: // out-left
+        case 0: // out-left
             value = (fOutLeft * kSmoothMultiplier + value) / (kSmoothMultiplier + 1.0f);
 
             /**/ if (value < 0.001f) value = 0.0f;
@@ -74,7 +70,7 @@ protected:
             }
             break;
 
-        case 2: // out-right
+        case 1: // out-right
             value = (fOutRight * kSmoothMultiplier + value) / (kSmoothMultiplier + 1.0f);
 
             /**/ if (value < 0.001f) value = 0.0f;
@@ -87,8 +83,8 @@ protected:
             }
             break;
         
-        case 3: // Midi Toogle of color
-            updateColor(std::round(value));
+        case 2: // Midi Toogle of color
+            //TODO CjD update midi message box;
             break;
             
         }
@@ -186,23 +182,6 @@ protected:
         closePath();
     }
 
-   /**
-      Mouse press event.
-      This UI will change color when clicked.
-    */
-    bool onMouse(const MouseEvent& ev) override
-    {
-        // Test for left-clicked + pressed first.
-        if (ev.button != 1 || ! ev.press)
-            return false;
-
-        const int newColor(fColorValue == 0 ? 1 : 0);
-        updateColor(newColor);
-        setParameterValue(0, newColor);
-
-        return true;
-    }
-
     // -------------------------------------------------------------------------------------------------------
 
 private:
@@ -219,32 +198,9 @@ private:
     float fOutLeft, fOutRight;
 
    /**
-      Update color if needed.
-    */
-    void updateColor(const int color)
-    {
-        if (fColorValue == color)
-            return;
-
-        fColorValue = color;
-
-        switch (color)
-        {
-        case METER_COLOR_GREEN:
-            fColor = Color(93, 231, 61);
-            break;
-        case METER_COLOR_BLUE:
-            fColor = Color(82, 238, 248);
-            break;
-        }
-
-        repaint();
-    }
-
-   /**
       Set our UI class as non-copyable and add a leak detector just in case.
     */
-    DISTRHO_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ExampleUIMeters)
+    DISTRHO_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MidiMeterMonUI)
 };
 
 /* ------------------------------------------------------------------------------------------------------------
@@ -252,7 +208,7 @@ private:
 
 UI* createUI()
 {
-    return new ExampleUIMeters();
+    return new MidiMeterMonUI();
 }
 
 // -----------------------------------------------------------------------------------------------------------

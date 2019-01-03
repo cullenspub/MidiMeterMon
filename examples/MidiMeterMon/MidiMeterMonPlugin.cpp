@@ -27,7 +27,12 @@ class MidiMeterMonitorPlugin : public Plugin
 {
 public:
     MidiMeterMonitorPlugin()
-        : Plugin(0, 0, 0) {}
+        : Plugin(3, 0, 0),
+          fOutLeft(0.0f),
+          fOutRight(0.0f),
+          fMidiMessage(0.0f),
+          fNeedsReset(true)        
+         {}
 
 protected:
    /* --------------------------------------------------------------------------------------------------------
@@ -95,9 +100,86 @@ protected:
    /* --------------------------------------------------------------------------------------------------------
     * Init and Internal data, unused in this plugin */
 
-    void  initParameter(uint32_t, Parameter&) override {}
-    float getParameterValue(uint32_t) const   override { return 0.0f;}
+    void  initParameter(uint32_t index, Parameter& parameter) override 
+    {
+       /**
+          All parameters in this plugin have the same ranges.
+        */
+        parameter.ranges.min = 0.0f;
+        parameter.ranges.max = 1.0f;
+        parameter.ranges.def = 0.0f;
+
+       /**
+          Set parameter data.
+        */
+        switch (index)
+        {
+        case 0:
+            parameter.hints  = kParameterIsAutomable|kParameterIsOutput;
+            parameter.name   = "out-left";
+            parameter.symbol = "out_left";
+            break;
+        case 1:
+            parameter.hints  = kParameterIsAutomable|kParameterIsOutput;
+            parameter.name   = "out-right";
+            parameter.symbol = "out_right";
+            break;
+        case 2:
+            parameter.hints  = kParameterIsInteger|kParameterIsOutput|kParameterIsAutomable;
+            parameter.name   = "midi-toogle";
+            parameter.symbol = "midi_toogle";
+            parameter.enumValues.count = 2;
+            parameter.enumValues.restrictedMode = true;
+            {
+                ParameterEnumerationValue* const values = new ParameterEnumerationValue[2];
+                parameter.enumValues.values = values;
+                values[0].label = "on";
+                values[0].value = 1;
+                values[1].label = "off";
+                values[1].value = 0;
+            }
+            break;
+        }
+
+    }
+
+   /**
+      Set a state key and default value.
+      This function will be called once, shortly after the plugin is created.
+    */
+    void initState(uint32_t, String&, String&) override
+    {
+        // we are using states but don't want them saved in the host
+    }
+
+    float getParameterValue(uint32_t index) const   override 
+    { switch (index) 
+        {
+        case 0: return fOutLeft;
+        case 1: return fOutRight;
+        case 2: return fMidiMessage;
+        }
+        
+        return 0.0f;
+    }
+
+    /**
+     * This is only for input parameters
+     * Will not be used (I think)
+     */
     void  setParameterValue(uint32_t, float)  override {}
+
+
+   /**
+      Change an internal state.
+    */
+    void setState(const char* key, const char*) override
+    {
+        if (std::strcmp(key, "reset") != 0)
+            return;
+
+        fNeedsReset = true;
+    }
 
    /* --------------------------------------------------------------------------------------------------------
     * Audio/MIDI Processing */
@@ -116,7 +198,17 @@ protected:
     // -------------------------------------------------------------------------------------------------------
 
 private:
-    // nothing here :)
+    /**
+     * Parameters
+     */
+    float fOutLeft, fOutRight;
+    float fMidiMessage; //TODO Figure out what this should be
+
+   /**
+      Boolean used to reset meter values.
+      The UI will send a "reset" message which sets this as true.
+    */
+    volatile bool fNeedsReset;
 
    /**
       Set our plugin class as non-copyable and add a leak detector just in case.

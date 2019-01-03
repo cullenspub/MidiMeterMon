@@ -13,7 +13,8 @@
  * IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-
+#include <bitset>
+#include <iostream>
 #include "DistrhoPlugin.hpp"
 
 START_NAMESPACE_DISTRHO
@@ -27,10 +28,11 @@ class ExamplePluginMeters : public Plugin
 {
 public:
     ExamplePluginMeters()
-        : Plugin(3, 0, 0), // 3 parameters, 0 programs, 0 states
+        : Plugin(4, 0, 0), // 4 parameters, 0 programs, 0 states
           fColor(0.0f),
           fOutLeft(0.0f),
           fOutRight(0.0f),
+          fMidiToogle(0.0f),
           fNeedsReset(true)
     {
     }
@@ -39,9 +41,9 @@ protected:
    /* --------------------------------------------------------------------------------------------------------
     * Information */
 
-   /**
-      Get the plugin label.
-      A plugin label follows the same rules as Parameter::symbol, with the exception that it can start with numbers.
+   /**fNeedsReset
+      Get the plugin label.fNeedsReset
+      A plugin label follows the same rules as Parameter::symbol, with the exceptifNeedsReseton that it can start with numbers.
     */
     const char* getLabel() const override
     {
@@ -145,6 +147,21 @@ protected:
             parameter.name   = "out-right";
             parameter.symbol = "out_right";
             break;
+        case 3:
+            parameter.hints  = kParameterIsInteger|kParameterIsOutput|kParameterIsAutomable;
+            parameter.name   = "midi-toogle";
+            parameter.symbol = "midi_toogle";
+            parameter.enumValues.count = 2;
+            parameter.enumValues.restrictedMode = true;
+            {
+                ParameterEnumerationValue* const values = new ParameterEnumerationValue[2];
+                parameter.enumValues.values = values;
+                values[0].label = "on";
+                values[0].value = 1;
+                values[1].label = "off";
+                values[1].value = 0;
+            }
+            break;
         }
     }
 
@@ -170,6 +187,7 @@ protected:
         case 0: return fColor;
         case 1: return fOutLeft;
         case 2: return fOutRight;
+        case 3: return fMidiToogle;
         }
 
         return 0.0f;
@@ -181,9 +199,10 @@ protected:
     void setParameterValue(uint32_t index, float value) override
     {
         // this is only called for input paramters, and we only have one of those.
-        if (index != 0) return;
-
-        fColor = value;
+        if (index == 0) 
+            fColor = value;
+        if (index == 4)
+            fMidiToogle = value;
     }
 
    /**
@@ -203,7 +222,7 @@ protected:
    /**
       Run/process function for plugins without MIDI input.
     */
-    void run(const float** inputs, float** outputs, uint32_t frames) override
+    void run(const float** inputs, float** outputs, uint32_t frames) //override
     {
         float tmp;
         float tmpLeft  = 0.0f;
@@ -233,7 +252,7 @@ protected:
         {
             fOutLeft  = tmpLeft;
             fOutRight = tmpRight;
-            fNeedsReset = false;
+            // fNeedsReset = false;
         }
         else
         {
@@ -251,13 +270,48 @@ protected:
             std::memcpy(outputs[1], inputs[1], sizeof(float)*frames);
     }
 
+    void run(const float** inputs, float** outputs, uint32_t frames,
+                     const MidiEvent* midiEvents, uint32_t midiEventCount) override 
+    {
+        //process the audio events using original demo code
+        run(inputs, outputs, frames);
+
+        //copy midi in to midi out
+        bool midiNoteFound = false;
+        for (uint32_t i = 0; i < midiEventCount; i++)
+        {
+
+            //todo check for event of note on
+            midiNoteFound = true;
+            std::cout << "Size: " << midiEvents[i].size << std::endl;     
+            if (midiEvents[i].size <= midiEvents[i].kDataSize)
+            {
+                uint8_t databyte = 0;
+                for (uint32_t data_ctr = 0; data_ctr < midiEvents[i].size; data_ctr++) {
+                    databyte = midiEvents[i].data[data_ctr];
+                    std::cout << "byte nbr " << data_ctr << ": " << std::bitset<8>(databyte) 
+                        << "  0x" << std::hex << ((databyte & 0xF0)>>4) << std::hex << (databyte & 0x0F)
+                        << " " << std::dec << (uint32_t)databyte << std::endl;     
+                }
+                
+            }
+            writeMidiEvent(midiEvents[i]);
+            
+        }
+        if (midiNoteFound) 
+        {
+            fMidiToogle = midiNoteFound ? !fMidiToogle : fMidiToogle;
+            setParameterValue(4,fMidiToogle);
+        }
+    }                     
+
     // -------------------------------------------------------------------------------------------------------
 
 private:
    /**
       Parameters.
     */
-    float fColor, fOutLeft, fOutRight;
+    float fColor, fOutLeft, fOutRight, fMidiToogle;
 
    /**
       Boolean used to reset meter values.

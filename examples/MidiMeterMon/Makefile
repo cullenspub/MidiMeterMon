@@ -15,6 +15,8 @@ NAME = midimetermon
 FILES_DSP = \
 	MidiMeterMonPlugin.cpp
 
+FILES_UI  = \
+	MidiMeterMonUI.cpp
 # --------------------------------------------------------------
 # Do some magic
 
