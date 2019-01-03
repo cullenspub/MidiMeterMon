@@ -14,6 +14,8 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include <bitset>
+#include <iostream>
 #include "DistrhoPlugin.hpp"
 
 START_NAMESPACE_DISTRHO
@@ -27,12 +29,11 @@ class MidiMeterMonitorPlugin : public Plugin
 {
 public:
     MidiMeterMonitorPlugin()
-        : Plugin(3, 0, 0),
-          fOutLeft(0.0f),
-          fOutRight(0.0f),
-          fMidiMessage(0.0f),
+        : Plugin(cParameterCount, 0, 0),
           fNeedsReset(true)        
-         {}
+        {  
+            std::memset(fParameters,0,sizeof(float)*cParameterCount);
+        }
 
 protected:
    /* --------------------------------------------------------------------------------------------------------
@@ -40,7 +41,6 @@ protected:
 
    /**
       Get the plugin label.
-      This label is a short restricted name consisting of only _, a-z, A-Z and 0-9 characters.
     */
     const char* getLabel() const override
     {
@@ -114,33 +114,37 @@ protected:
         */
         switch (index)
         {
-        case 0:
+        case cParameterOutLeft:
             parameter.hints  = kParameterIsAutomable|kParameterIsOutput;
             parameter.name   = "out-left";
             parameter.symbol = "out_left";
             break;
-        case 1:
+        case cParameterOutRight:
             parameter.hints  = kParameterIsAutomable|kParameterIsOutput;
             parameter.name   = "out-right";
             parameter.symbol = "out_right";
             break;
-        case 2:
-            parameter.hints  = kParameterIsInteger|kParameterIsOutput|kParameterIsAutomable;
-            parameter.name   = "midi-toogle";
-            parameter.symbol = "midi_toogle";
-            parameter.enumValues.count = 2;
-            parameter.enumValues.restrictedMode = true;
-            {
-                ParameterEnumerationValue* const values = new ParameterEnumerationValue[2];
-                parameter.enumValues.values = values;
-                values[0].label = "on";
-                values[0].value = 1;
-                values[1].label = "off";
-                values[1].value = 0;
-            }
+        case cParameterMidiMessage1:
+            parameter.hints  = kParameterIsOutput|kParameterIsAutomable;
+            parameter.name   = "midi-msg1";
+            parameter.symbol = "midi_msg1";
+            break;
+        case cParameterMidiMessage2:
+            parameter.hints  = kParameterIsOutput|kParameterIsAutomable;
+            parameter.name   = "midi-msg2";
+            parameter.symbol = "midi_msg2";
+            break;
+        case cParameterMidiMessage3:
+            parameter.hints  = kParameterIsOutput||kParameterIsAutomable;
+            parameter.name   = "midi-msg3";
+            parameter.symbol = "midi_msg3";
+            break;
+        case cParameterMidiMessage4:
+            parameter.hints  = kParameterIsOutput|kParameterIsAutomable;
+            parameter.name   = "midi-msg4";
+            parameter.symbol = "midi_msg4";
             break;
         }
-
     }
 
    /**
@@ -153,13 +157,16 @@ protected:
     }
 
     float getParameterValue(uint32_t index) const   override 
-    { switch (index) 
+    { 
+        switch (index) 
         {
-        case 0: return fOutLeft;
-        case 1: return fOutRight;
-        case 2: return fMidiMessage;
+        case cParameterOutLeft:      return fParameters[cParameterOutLeft];
+        case cParameterOutRight:     return fParameters[cParameterOutRight];
+        case cParameterMidiMessage1: return fParameters[cParameterMidiMessage1];
+        case cParameterMidiMessage2: return fParameters[cParameterMidiMessage2];
+        case cParameterMidiMessage3: return fParameters[cParameterMidiMessage3];
+        case cParameterMidiMessage4: return fParameters[cParameterMidiMessage4];
         }
-        
         return 0.0f;
     }
 
@@ -185,24 +192,104 @@ protected:
     * Audio/MIDI Processing */
 
    /**
-      Run/process function for plugins with MIDI input.
-      In this case we just pass-through all MIDI events.
+      Run/process function for plugins without MIDI input.
     */
-    void run(const float**, float**, uint32_t,
-             const MidiEvent* midiEvents, uint32_t midiEventCount) override
+    void run(const float** inputs, float** outputs, uint32_t frames) //override
     {
-        for (uint32_t i=0; i<midiEventCount; ++i)
-            writeMidiEvent(midiEvents[i]);
+        float tmp;
+        float tmpLeft  = 0.0f;
+        float tmpRight = 0.0f;
+
+        for (uint32_t i=0; i<frames; ++i)
+        {
+            // left
+            tmp = std::abs(inputs[0][i]);
+
+            if (tmp > tmpLeft)
+                tmpLeft = tmp;
+
+            // right
+            tmp = std::abs(inputs[1][i]);
+
+            if (tmp > tmpRight)
+                tmpRight = tmp;
+        }
+
+        if (tmpLeft > 1.0f)
+            tmpLeft = 1.0f;
+        if (tmpRight > 1.0f)
+            tmpRight = 1.0f;
+
+        if (fNeedsReset)
+        {
+            fParameters[cParameterOutLeft]  = tmpLeft;
+            fParameters[cParameterOutRight] = tmpRight;
+            fNeedsReset = false;
+        }
+        else
+        {
+            if (tmpLeft > fParameters[cParameterOutLeft])
+                fParameters[cParameterOutLeft] = tmpLeft;
+            if (tmpRight > fParameters[cParameterOutRight])
+                fParameters[cParameterOutRight] = tmpRight;
+        }
+
+        // copy inputs over outputs if needed
+        if (outputs[0] != inputs[0])
+            std::memcpy(outputs[0], inputs[0], sizeof(float)*frames);
+
+        if (outputs[1] != inputs[1])
+            std::memcpy(outputs[1], inputs[1], sizeof(float)*frames);
     }
 
+    void run(const float** inputs, float** outputs, uint32_t frames,
+                     const MidiEvent* midiEvents, uint32_t midiEventCount) override 
+    {
+        //process the audio events using original demo code
+        run(inputs, outputs, frames);
+
+        //copy midi in to midi out
+        for (uint32_t i = 0; i < midiEventCount; i++)
+        {
+
+            //add next four midi messages
+            std::cout << "Size: " << midiEvents[i].size << std::endl;     
+            if (midiEvents[i].size <= midiEvents[i].kDataSize)
+            {
+                uint8_t databyte = 0;
+                for (uint32_t data_ctr = 0; data_ctr < midiEvents[i].size; data_ctr++) {
+                    databyte = midiEvents[i].data[data_ctr];
+                    std::cout << "byte nbr " << data_ctr << ": " << std::bitset<8>(databyte) 
+                        << "  0x" << std::hex << ((databyte & 0xF0)>>4) << std::hex << (databyte & 0x0F)
+                        << " " << std::dec << (uint32_t)databyte << std::endl;     
+                }
+                
+            }
+            writeMidiEvent(midiEvents[i]);
+            
+        }
+    }                     
+
+/******************** ORIGINAL  */
+//    /**
+//       Run/process function for plugins with MIDI input.
+//       In this case we just pass-through all MIDI events.
+//     */
+//     void run(const float**, float**, uint32_t,
+//              const MidiEvent* midiEvents, uint32_t midiEventCount) override
+//     {
+//         for (uint32_t i=0; i<midiEventCount; ++i)
+//             writeMidiEvent(midiEvents[i]);
+//     }
+
     // -------------------------------------------------------------------------------------------------------
+
 
 private:
     /**
      * Parameters
      */
-    float fOutLeft, fOutRight;
-    float fMidiMessage; //TODO Figure out what this should be
+    float fParameters[cParameterCount];
 
    /**
       Boolean used to reset meter values.

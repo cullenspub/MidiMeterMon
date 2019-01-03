@@ -15,6 +15,7 @@
  */
 
 #include "DistrhoUI.hpp"
+#include "DistrhoPluginInfo.h"
 
 START_NAMESPACE_DISTRHO
 
@@ -34,15 +35,11 @@ class MidiMeterMonUI : public UI
 {
 public:
     MidiMeterMonUI()
-        : UI(128, 512, true),
+        : UI(500, 200, true),
           // default color is green
-          fColor(93, 231, 61),
-          // which is value 0
-          fColorValue(0),
-          // init meter values to 0
-          fOutLeft(0.0f),
-          fOutRight(0.0f)
+          fColor(93, 231, 61)
     {
+        std::memset(fParameterOutputs,0,sizeof(float)*cParameterCount);
     }
 
 protected:
@@ -57,33 +54,36 @@ protected:
     {
         switch (index)
         {
-        case 0: // out-left
-            value = (fOutLeft * kSmoothMultiplier + value) / (kSmoothMultiplier + 1.0f);
+        case cParameterOutLeft: // out-left
+            value = (fParameterOutputs[cParameterOutLeft] * kSmoothMultiplier + value) / (kSmoothMultiplier + 1.0f);
 
             /**/ if (value < 0.001f) value = 0.0f;
             else if (value > 0.999f) value = 1.0f;
 
-            if (fOutLeft != value)
+            if (fParameterOutputs[cParameterOutLeft] != value)
             {
-                fOutLeft = value;
+                fParameterOutputs[cParameterOutLeft] = value;
                 repaint();
             }
             break;
 
-        case 1: // out-right
-            value = (fOutRight * kSmoothMultiplier + value) / (kSmoothMultiplier + 1.0f);
+        case cParameterOutRight: // out-right
+            value = (fParameterOutputs[cParameterOutRight] * kSmoothMultiplier + value) / (kSmoothMultiplier + 1.0f);
 
             /**/ if (value < 0.001f) value = 0.0f;
             else if (value > 0.999f) value = 1.0f;
 
-            if (fOutRight != value)
+            if (fParameterOutputs[cParameterOutRight] != value)
             {
-                fOutRight = value;
+                fParameterOutputs[cParameterOutRight] = value;
                 repaint();
             }
             break;
         
-        case 2: // Midi Toogle of color
+        case cParameterMidiMessage1:
+        case cParameterMidiMessage2:
+        case cParameterMidiMessage3:
+        case cParameterMidiMessage4:
             //TODO CjD update midi message box;
             break;
             
@@ -111,15 +111,19 @@ protected:
         static const Color kColorBlack(0, 0, 0);
         static const Color kColorRed(255, 0, 0);
         static const Color kColorYellow(255, 255, 0);
+        static const Color kColorSmoke(245,245,245);
+        static const Color kColorCarbon(50,50,50);
 
         // get meter values
-        const float outLeft(fOutLeft);
-        const float outRight(fOutRight);
+        const float outLeft(fParameterOutputs[cParameterOutLeft]);
+        const float outRight(fParameterOutputs[cParameterOutRight]);
 
         // tell DSP side to reset meter values
         setState("reset", "");
 
         // useful vars
+        const float meterWidth       = static_cast<float>(getWidth())/12; 
+        const float strockWidth      = 3.0f; 
         const float halfWidth        = static_cast<float>(getWidth())/2;
         const float redYellowHeight  = static_cast<float>(getHeight())*0.2f;
         const float yellowBaseHeight = static_cast<float>(getHeight())*0.4f;
@@ -131,55 +135,66 @@ protected:
 
         // paint left meter
         beginPath();
-        rect(0.0f, 0.0f, halfWidth-1.0f, redYellowHeight);
+        rect(0.0f, 0.0f, meterWidth-1.0f, redYellowHeight);
         fillPaint(fGradient1);
         fill();
         closePath();
 
         beginPath();
-        rect(0.0f, redYellowHeight-0.5f, halfWidth-1.0f, yellowBaseHeight);
+        rect(0.0f, redYellowHeight-0.5f, meterWidth-1.0f, yellowBaseHeight);
         fillPaint(fGradient2);
         fill();
         closePath();
 
         beginPath();
-        rect(0.0f, redYellowHeight+yellowBaseHeight-1.5f, halfWidth-1.0f, baseBaseHeight);
+        rect(0.0f, redYellowHeight+yellowBaseHeight-1.5f, meterWidth-1.0f, baseBaseHeight);
         fillColor(fColor);
         fill();
         closePath();
 
         // paint left black matching output level
         beginPath();
-        rect(0.0f, 0.0f, halfWidth-1.0f, (1.0f-outLeft)*getHeight());
+        rect(0.0f, 0.0f, meterWidth-1.0f, (1.0f-outLeft)*getHeight());
         fillColor(kColorBlack);
         fill();
         closePath();
 
         // paint right meter
         beginPath();
-        rect(halfWidth+1.0f, 0.0f, halfWidth-2.0f, redYellowHeight);
+        rect(meterWidth+1.0f, 0.0f, meterWidth-2.0f, redYellowHeight);
         fillPaint(fGradient1);
         fill();
         closePath();
 
         beginPath();
-        rect(halfWidth+1.0f, redYellowHeight-0.5f, halfWidth-2.0f, yellowBaseHeight);
+        rect(meterWidth+1.0f, redYellowHeight-0.5f, meterWidth-2.0f, yellowBaseHeight);
         fillPaint(fGradient2);
         fill();
         closePath();
 
         beginPath();
-        rect(halfWidth+1.0f, redYellowHeight+yellowBaseHeight-1.5f, halfWidth-2.0f, baseBaseHeight);
+        rect(meterWidth+1.0f, redYellowHeight+yellowBaseHeight-1.5f, meterWidth-2.0f, baseBaseHeight);
         fillColor(fColor);
         fill();
         closePath();
 
         // paint right black matching output level
         beginPath();
-        rect(halfWidth+1.0f, 0.0f, halfWidth-2.0f, (1.0f-outRight)*getHeight());
+        rect(meterWidth+1.0f, 0.0f, meterWidth-2.0f, (1.0f-outRight)*getHeight());
         fillColor(kColorBlack);
         fill();
         closePath();
+
+        // paint Midi Message background
+        beginPath();
+        rect(meterWidth*2, strockWidth, getWidth()-(meterWidth*2)-strockWidth, getHeight()-strockWidth);
+        fillColor(kColorSmoke);
+        strokeColor(kColorCarbon);
+        strokeWidth(strockWidth);
+        fill();
+        stroke();
+        closePath();
+
     }
 
     // -------------------------------------------------------------------------------------------------------
@@ -189,13 +204,12 @@ private:
       Color and its matching parameter value.
     */
     Color fColor;
-    int   fColorValue;
 
    /**
       Meter values.
       These are the parameter outputs from the DSP side.
     */
-    float fOutLeft, fOutRight;
+    float fParameterOutputs[cParameterCount];
 
    /**
       Set our UI class as non-copyable and add a leak detector just in case.

@@ -30,4 +30,13 @@
 #define DISTRHO_PLUGIN_WANT_STATE       1
 #define DISTRHO_UI_USE_NANOVG           1
 
+enum Parameters {
+    cParameterOutLeft = 0,
+    cParameterOutRight,
+    cParameterMidiMessage1,
+    cParameterMidiMessage2,
+    cParameterMidiMessage3,
+    cParameterMidiMessage4,
+    cParameterCount
+};
 #endif // DISTRHO_PLUGIN_MIDIMETERMON_H_INCLUDED
