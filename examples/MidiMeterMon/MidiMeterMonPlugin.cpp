@@ -15,6 +15,7 @@
  */
 
 #include <bitset>
+#include <queue>
 #include <iostream>
 #include "DistrhoPlugin.hpp"
 
@@ -194,7 +195,7 @@ protected:
    /**
       Run/process function for plugins without MIDI input.
     */
-    void run(const float** inputs, float** outputs, uint32_t frames) //override
+    void run(const float** inputs, float** outputs, uint32_t frames)
     {
         float tmp;
         float tmpLeft  = 0.0f;
@@ -245,45 +246,75 @@ protected:
     void run(const float** inputs, float** outputs, uint32_t frames,
                      const MidiEvent* midiEvents, uint32_t midiEventCount) override 
     {
-        //process the audio events using original demo code
+        //process the audio events to capture audio meter values
         run(inputs, outputs, frames);
+        
+        //Exit if nothing to do
+        if (midiEventCount == 0) return;
 
-        //copy midi in to midi out
+        //Popululate queue with existing messages
+        std::deque<float> messageQueue;
+        for (uint8_t pcount = 2; pcount < MIDI_PARAMETER_COUNT + 2; pcount++)
+        {
+            messageQueue.push_back(fParameters[pcount]);
+        }
+
+        //Variables used for type punning a midi message as a float 
+        uint8_t messageBytes[sizeof(float)] = {0};
+        float messagePacked = {0};
+
+        //Convert midi messages to float parameters the UI can consume
         for (uint32_t i = 0; i < midiEventCount; i++)
         {
-
-            //add next four midi messages
-            std::cout << "Size: " << midiEvents[i].size << std::endl;     
             if (midiEvents[i].size <= midiEvents[i].kDataSize)
             {
-                uint8_t databyte = 0;
+                //Pack midi message bytes into a float using type punning
+                std::memset(&messageBytes,0,sizeof(float));
                 for (uint32_t data_ctr = 0; data_ctr < midiEvents[i].size; data_ctr++) {
-                    databyte = midiEvents[i].data[data_ctr];
-                    std::cout << "byte nbr " << data_ctr << ": " << std::bitset<8>(databyte) 
-                        << "  0x" << std::hex << ((databyte & 0xF0)>>4) << std::hex << (databyte & 0x0F)
-                        << " " << std::dec << (uint32_t)databyte << std::endl;     
+                    messageBytes[data_ctr] = midiEvents[i].data[data_ctr];
                 }
-                
-            }
+                messagePacked = reinterpret_cast<float&>(messageBytes);
+
+                //Push new message onto the queue
+                messageQueue.push_front(messagePacked);
+
+                #if defined(VERBOSE_LOGGING)
+                auto bytesFromPun = reinterpret_cast<uint8_t*>(&messagePacked);
+                std::cout << "[" << std::bitset<8>(bytesFromPun[0]) << "]"  
+                         << " [0x" << std::hex << ((bytesFromPun[0] & 0xF0)>>4) << std::hex << (bytesFromPun[0] & 0x0F) << "]" 
+                         << " [" << std::dec << (uint32_t)bytesFromPun[0] << "]" ;     
+                std::cout << " [" << std::bitset<8>(bytesFromPun[1]) << "]" 
+                         << " [0x" << std::hex << ((bytesFromPun[1] & 0xF0)>>4) << std::hex << (bytesFromPun[1] & 0x0F) << "]"
+                         << " [" << std::dec << (uint32_t)bytesFromPun[1] << "]";     
+                if (midiEvents[i].size > 2) 
+                {
+                    std::cout << " [" << std::bitset<8>(bytesFromPun[2]) << "]" 
+                            << " [0x" << std::hex << ((bytesFromPun[2] & 0xF0)>>4) << std::hex << (bytesFromPun[2] & 0x0F) << "]"
+                            << " [" << std::dec << (uint32_t)bytesFromPun[2] << "]";     
+                }             
+                std::cout << std::endl;   
+                #endif             
+            }            
             writeMidiEvent(midiEvents[i]);
             
         }
+        //Put as many packed messages into the parameter list as it will hold. 
+        for (uint8_t pcount = 2; pcount < MIDI_PARAMETER_COUNT + 2; pcount++)
+        {
+            fParameters[pcount] = messageQueue.front();
+            messageQueue.pop_front();
+        }
+        #if defined(VERBOSE_LOGGING)
+        std::cout << "fParameters: ";
+        for (uint8_t pcount = 2; pcount < MIDI_PARAMETER_COUNT + 2; pcount++)
+        {
+            std::cout << fParameters[pcount] << " "; 
+        }
+        std::cout << std::endl;
+        #endif             
     }                     
 
-/******************** ORIGINAL  */
-//    /**
-//       Run/process function for plugins with MIDI input.
-//       In this case we just pass-through all MIDI events.
-//     */
-//     void run(const float**, float**, uint32_t,
-//              const MidiEvent* midiEvents, uint32_t midiEventCount) override
-//     {
-//         for (uint32_t i=0; i<midiEventCount; ++i)
-//             writeMidiEvent(midiEvents[i]);
-//     }
-
-    // -------------------------------------------------------------------------------------------------------
-
+   // -------------------------------------------------------------------------------------------------------
 
 private:
     /**
