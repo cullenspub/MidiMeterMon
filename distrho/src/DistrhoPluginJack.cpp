@@ -262,8 +262,9 @@ protected:
             {
                 const float value = fPlugin.getParameterValue(i);
 
-                if (d_isEqual(fLastOutputValues[i], value))
-                    continue;
+                //TODO CjD Figure out why the values are always true for the midi events
+                // if (d_isEqual(fLastOutputValues[i], value))
+                //     continue;
 
                 fLastOutputValues[i] = value;
                 fUI.parameterChanged(i, value);

@@ -15,6 +15,7 @@
  */
 
 #include "DistrhoUIInternal.hpp"
+#include <iostream>
 
 #include "../extra/String.hpp"
 
@@ -138,7 +139,6 @@ public:
         else if (format == fEventTransferURID)
         {
             const LV2_Atom* const atom((const LV2_Atom*)buffer);
-
             DISTRHO_SAFE_ASSERT_RETURN(atom->type == fKeyValueURID,);
 
             const char* const key   = (const char*)LV2_ATOM_BODY_CONST(atom);

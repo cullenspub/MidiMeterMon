@@ -16,6 +16,8 @@
 
 #include "DistrhoUI.hpp"
 #include "DistrhoPluginInfo.h"
+#include <iostream>
+#include <bitset>
 
 START_NAMESPACE_DISTRHO
 
@@ -81,9 +83,26 @@ protected:
             break;
         
         case cParameterMidiMessage1:
+            if (fParameterOutputs[index] != value) {
+                processMidiMessage(index,value);
+            }
+            break;
         case cParameterMidiMessage2:
+            if (fParameterOutputs[index] != value) {
+                processMidiMessage(index,value);
+            }
+            //TODO CjD update midi message box;
+            break;
         case cParameterMidiMessage3:
+            if (fParameterOutputs[index] != value) {
+                processMidiMessage(index,value);
+            }
+            //TODO CjD update midi message box;
+            break;
         case cParameterMidiMessage4:
+            if (fParameterOutputs[index] != value) {
+                processMidiMessage(index,value);
+            }
             //TODO CjD update midi message box;
             break;
             
@@ -118,12 +137,12 @@ protected:
         const float outLeft(fParameterOutputs[cParameterOutLeft]);
         const float outRight(fParameterOutputs[cParameterOutRight]);
 
-        // tell DSP side to reset meter values
+         // tell DSP side to reset meter values
         setState("reset", "");
 
         // useful vars
         const float meterWidth       = static_cast<float>(getWidth())/12; 
-        const float strockWidth      = 3.0f; 
+        const float strokeWidth      = 3.0f; 
         const float halfWidth        = static_cast<float>(getWidth())/2;
         const float redYellowHeight  = static_cast<float>(getHeight())*0.2f;
         const float yellowBaseHeight = static_cast<float>(getHeight())*0.4f;
@@ -178,7 +197,6 @@ protected:
         fill();
         closePath();
 
-        // paint right black matching output level
         beginPath();
         rect(meterWidth+1.0f, 0.0f, meterWidth-2.0f, (1.0f-outRight)*getHeight());
         fillColor(kColorBlack);
@@ -187,10 +205,10 @@ protected:
 
         // paint Midi Message background
         beginPath();
-        rect(meterWidth*2, strockWidth, getWidth()-(meterWidth*2)-strockWidth, getHeight()-strockWidth);
+        rect(meterWidth*2, strokeWidth, getWidth()-(meterWidth*2)-strokeWidth, getHeight()-strokeWidth);
         fillColor(kColorSmoke);
         strokeColor(kColorCarbon);
-        strokeWidth(strockWidth);
+        strokeWidth(strokeWidth);
         fill();
         stroke();
         closePath();
@@ -206,10 +224,151 @@ private:
     Color fColor;
 
    /**
-      Meter values.
+      Meter values and MIDI messages.
       These are the parameter outputs from the DSP side.
     */
     float fParameterOutputs[cParameterCount];
+
+    /**
+     * get message into local parameter store
+     * translate message into human readable message
+     * update ui with message string
+     */
+    void processMidiMessage(uint32_t index, float midiMessage)
+    {
+        fParameterOutputs[index] = midiMessage;
+        //unpack float into midi message
+        //update midi message box
+        logMidiMessageParameter(midiMessage);
+        repaint();
+        //log message
+    }
+
+    void logMidiMessageParameter(float packedMidiMessage) 
+    {
+        auto messageBytes = reinterpret_cast<uint8_t*>(&packedMidiMessage);
+        for (uint8_t i = 0; i < 4;i++){
+            std::cout << std::hex << ((messageBytes[i] & 0xF0)>>4) << std::hex << (messageBytes[i] & 0x0F) << " "; 
+        }
+        std::cout << std::endl;
+    }
+
+    // void drawParagraph(float x, float y, float width, float height, float mx, float my)
+    // {
+    //     TextRow rows[3];
+    //     NVGglyphPosition glyphs[100];
+    //     const char* text = "This is longer chunk of text.\n  \n  Would have used lorem ipsum but she    was busy jumping over the lazy dog with the fox and all the men who came to the aid of the party.🎉";
+    //     const char* start;
+    //     const char* end;
+    //     int nrows, i, nglyphs, j, lnum = 0;
+    //     float lineh;
+    //     float caretx, px;
+    //     float bounds[4];
+    //     float a;
+    //     float gx,gy;
+    //     int gutter = 0;
+    //     NVG_NOTUSED(height);
+
+    //     nvgSave(vg);
+
+    //     nvgFontSize(vg, 18.0f);
+    //     nvgFontFace(vg, "sans");
+    //     nvgTextAlign(vg, NVG_ALIGN_LEFT|NVG_ALIGN_TOP);
+    //     nvgTextMetrics(vg, NULL, NULL, &lineh);
+
+    //     // The text break API can be used to fill a large buffer of rows,
+    //     // or to iterate over the text just few lines (or just one) at a time.
+    //     // The "next" variable of the last returned item tells where to continue.
+    //     start = text;
+    //     end = text + strlen(text);
+    //     while ((nrows = nvgTextBreakLines(vg, start, end, width, rows, 3))) {
+    //         for (i = 0; i < nrows; i++) {
+    //             NVGtextRow* row = &rows[i];
+    //             int hit = mx > x && mx < (x+width) && my >= y && my < (y+lineh);
+
+    //             nvgBeginPath(vg);
+    //             nvgFillColor(vg, nvgRGBA(255,255,255,hit?64:16));
+    //             nvgRect(vg, x, y, row->width, lineh);
+    //             nvgFill(vg);
+
+    //             nvgFillColor(vg, nvgRGBA(255,255,255,255));
+    //             nvgText(vg, x, y, row->start, row->end);
+
+    //             if (hit) {
+    //                 caretx = (mx < x+row->width/2) ? x : x+row->width;
+    //                 px = x;
+    //                 nglyphs = nvgTextGlyphPositions(vg, x, y, row->start, row->end, glyphs, 100);
+    //                 for (j = 0; j < nglyphs; j++) {
+    //                     float x0 = glyphs[j].x;
+    //                     float x1 = (j+1 < nglyphs) ? glyphs[j+1].x : x+row->width;
+    //                     float gx = x0 * 0.3f + x1 * 0.7f;
+    //                     if (mx >= px && mx < gx)
+    //                         caretx = glyphs[j].x;
+    //                     px = gx;
+    //                 }
+    //                 nvgBeginPath(vg);
+    //                 nvgFillColor(vg, nvgRGBA(255,192,0,255));
+    //                 nvgRect(vg, caretx, y, 1, lineh);
+    //                 nvgFill(vg);
+
+    //                 gutter = lnum+1;
+    //                 gx = x - 10;
+    //                 gy = y + lineh/2;
+    //             }
+    //             lnum++;
+    //             y += lineh;
+    //         }
+    //         // Keep going...
+    //         start = rows[nrows-1].next;
+    //     }
+
+    //     if (gutter) {
+    //         char txt[16];
+    //         snprintf(txt, sizeof(txt), "%d", gutter);
+    //         nvgFontSize(vg, 13.0f);
+    //         nvgTextAlign(vg, NVG_ALIGN_RIGHT|NVG_ALIGN_MIDDLE);
+
+    //         nvgTextBounds(vg, gx,gy, txt, NULL, bounds);
+
+    //         nvgBeginPath(vg);
+    //         nvgFillColor(vg, nvgRGBA(255,192,0,255));
+    //         nvgRoundedRect(vg, (int)bounds[0]-4,(int)bounds[1]-2, (int)(bounds[2]-bounds[0])+8, (int)(bounds[3]-bounds[1])+4, ((int)(bounds[3]-bounds[1])+4)/2-1);
+    //         nvgFill(vg);
+
+    //         nvgFillColor(vg, nvgRGBA(32,32,32,255));
+    //         nvgText(vg, gx,gy, txt, NULL);
+    //     }
+
+    //     y += 20.0f;
+
+    //     nvgFontSize(vg, 13.0f);
+    //     nvgTextAlign(vg, NVG_ALIGN_LEFT|NVG_ALIGN_TOP);
+    //     nvgTextLineHeight(vg, 1.2f);
+
+    //     nvgTextBoxBounds(vg, x,y, 150, "Hover your mouse over the text to see calculated caret position.", NULL, bounds);
+
+    //     // Fade the tooltip out when close to it.
+    //     gx = fabsf((mx - (bounds[0]+bounds[2])*0.5f) / (bounds[0] - bounds[2]));
+    //     gy = fabsf((my - (bounds[1]+bounds[3])*0.5f) / (bounds[1] - bounds[3]));
+    //     a = maxf(gx, gy) - 0.5f;
+    //     a = clampf(a, 0, 1);
+    //     nvgGlobalAlpha(vg, a);
+
+    //     nvgBeginPath(vg);
+    //     nvgFillColor(vg, nvgRGBA(220,220,220,255));
+    //     nvgRoundedRect(vg, bounds[0]-2,bounds[1]-2, (int)(bounds[2]-bounds[0])+4, (int)(bounds[3]-bounds[1])+4, 3);
+    //     px = (int)((bounds[2]+bounds[0])/2);
+    //     nvgMoveTo(vg, px,bounds[1] - 10);
+    //     nvgLineTo(vg, px+7,bounds[1]+1);
+    //     nvgLineTo(vg, px-7,bounds[1]+1);
+    //     nvgFill(vg);
+
+    //     nvgFillColor(vg, nvgRGBA(0,0,0,220));
+    //     nvgTextBox(vg, x,y, 150, "Hover your mouse over the text to see calculated caret position.", NULL);
+
+    //     nvgRestore(vg);
+    // }
+
 
    /**
       Set our UI class as non-copyable and add a leak detector just in case.

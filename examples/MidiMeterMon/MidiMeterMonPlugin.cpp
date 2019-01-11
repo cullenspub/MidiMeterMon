@@ -17,6 +17,7 @@
 #include <bitset>
 #include <queue>
 #include <iostream>
+#include <limits>
 #include "DistrhoPlugin.hpp"
 
 START_NAMESPACE_DISTRHO
@@ -106,9 +107,7 @@ protected:
        /**
           All parameters in this plugin have the same ranges.
         */
-        parameter.ranges.min = 0.0f;
-        parameter.ranges.max = 1.0f;
-        parameter.ranges.def = 0.0f;
+
 
        /**
           Set parameter data.
@@ -119,31 +118,49 @@ protected:
             parameter.hints  = kParameterIsAutomable|kParameterIsOutput;
             parameter.name   = "out-left";
             parameter.symbol = "out_left";
+            parameter.ranges.min = 0.0f;
+            parameter.ranges.max = 1.0f;
+            parameter.ranges.def = 0.0f;
             break;
         case cParameterOutRight:
             parameter.hints  = kParameterIsAutomable|kParameterIsOutput;
             parameter.name   = "out-right";
             parameter.symbol = "out_right";
+            parameter.ranges.min = 0.0f;
+            parameter.ranges.max = 1.0f;
+            parameter.ranges.def = 0.0f;
             break;
         case cParameterMidiMessage1:
-            parameter.hints  = kParameterIsOutput|kParameterIsAutomable;
+            parameter.hints  = kParameterIsAutomable|kParameterIsOutput;
             parameter.name   = "midi-msg1";
             parameter.symbol = "midi_msg1";
+            parameter.ranges.min = std::numeric_limits<float>::lowest();
+            parameter.ranges.max = std::numeric_limits<float>::max();
+            parameter.ranges.def = 0.0f;
             break;
         case cParameterMidiMessage2:
-            parameter.hints  = kParameterIsOutput|kParameterIsAutomable;
+            parameter.hints  = kParameterIsAutomable|kParameterIsOutput;
             parameter.name   = "midi-msg2";
             parameter.symbol = "midi_msg2";
+            parameter.ranges.min = std::numeric_limits<float>::lowest();
+            parameter.ranges.max = std::numeric_limits<float>::max();
+            parameter.ranges.def = 0.0f;
             break;
         case cParameterMidiMessage3:
-            parameter.hints  = kParameterIsOutput||kParameterIsAutomable;
+            parameter.hints  = kParameterIsAutomable|kParameterIsOutput;
             parameter.name   = "midi-msg3";
             parameter.symbol = "midi_msg3";
+            parameter.ranges.min = std::numeric_limits<float>::lowest();
+            parameter.ranges.max = std::numeric_limits<float>::max();
+            parameter.ranges.def = 0.0f;
             break;
         case cParameterMidiMessage4:
-            parameter.hints  = kParameterIsOutput|kParameterIsAutomable;
+            parameter.hints  = kParameterIsAutomable|kParameterIsOutput;
             parameter.name   = "midi-msg4";
             parameter.symbol = "midi_msg4";
+            parameter.ranges.min = std::numeric_limits<float>::lowest();
+            parameter.ranges.max = std::numeric_limits<float>::max();
+            parameter.ranges.def = 0.0f;
             break;
         }
     }
@@ -176,7 +193,6 @@ protected:
      * Will not be used (I think)
      */
     void  setParameterValue(uint32_t, float)  override {}
-
 
    /**
       Change an internal state.
@@ -221,19 +237,19 @@ protected:
         if (tmpRight > 1.0f)
             tmpRight = 1.0f;
 
-        if (fNeedsReset)
-        {
+        // if (fNeedsReset)
+        // {
             fParameters[cParameterOutLeft]  = tmpLeft;
             fParameters[cParameterOutRight] = tmpRight;
-            fNeedsReset = false;
-        }
-        else
-        {
-            if (tmpLeft > fParameters[cParameterOutLeft])
-                fParameters[cParameterOutLeft] = tmpLeft;
-            if (tmpRight > fParameters[cParameterOutRight])
-                fParameters[cParameterOutRight] = tmpRight;
-        }
+            // fNeedsReset = false;
+        // }
+        // else
+        // {
+        //     if (tmpLeft > fParameters[cParameterOutLeft])
+        //         fParameters[cParameterOutLeft] = tmpLeft;
+        //     if (tmpRight > fParameters[cParameterOutRight])
+        //         fParameters[cParameterOutRight] = tmpRight;
+        // }
 
         // copy inputs over outputs if needed
         if (outputs[0] != inputs[0])
@@ -254,7 +270,7 @@ protected:
 
         //Popululate queue with existing messages
         std::deque<float> messageQueue;
-        for (uint8_t pcount = 2; pcount < MIDI_PARAMETER_COUNT + 2; pcount++)
+        for (uint8_t pcount = 2; pcount < (MIDI_PARAMETER_COUNT + 2); pcount++)
         {
             messageQueue.push_back(fParameters[pcount]);
         }
