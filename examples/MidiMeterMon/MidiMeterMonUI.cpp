@@ -142,7 +142,7 @@ protected:
 
         // useful vars
         const float meterWidth       = static_cast<float>(getWidth())/12; 
-        const float strokeWidth      = 3.0f; 
+        const float widthOfStroke      = 3.0f; 
         const float halfWidth        = static_cast<float>(getWidth())/2;
         const float redYellowHeight  = static_cast<float>(getHeight())*0.2f;
         const float yellowBaseHeight = static_cast<float>(getHeight())*0.4f;
@@ -205,10 +205,10 @@ protected:
 
         // paint Midi Message background
         beginPath();
-        rect(meterWidth*2, strokeWidth, getWidth()-(meterWidth*2)-strokeWidth, getHeight()-strokeWidth);
+        rect(meterWidth*2, widthOfStroke, getWidth()-(meterWidth*2)-widthOfStroke, getHeight()-widthOfStroke);
         fillColor(kColorSmoke);
         strokeColor(kColorCarbon);
-        strokeWidth(strokeWidth);
+        strokeWidth(widthOfStroke);
         fill();
         stroke();
         closePath();
