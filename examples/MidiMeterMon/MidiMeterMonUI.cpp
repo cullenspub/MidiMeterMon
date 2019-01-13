@@ -142,8 +142,9 @@ protected:
         setState("reset", "");
 
         // useful vars
-        const float meterWidth       = static_cast<float>(getWidth())/12; 
-        const float widthOfStroke      = 3.0f; 
+        const float meterWidth       = static_cast<float>(getWidth())/12;
+        const float midiMsgTextGutter {5.0f}; 
+        const float widthOfStroke     {3.0f}; 
         const float halfWidth        = static_cast<float>(getWidth())/2;
         const float redYellowHeight  = static_cast<float>(getHeight())*0.2f;
         const float yellowBaseHeight = static_cast<float>(getHeight())*0.4f;
@@ -206,34 +207,23 @@ protected:
 
         // paint Midi Message background
         float bounds[4];
+        char text[] {"Hello\n World! This should be enough to wrap and wrap\n and wrap"};
+        save();
+     
         beginPath();
-
         fillColor(kColorSmoke);
         strokeColor(kColorCarbon);
         strokeWidth(widthOfStroke);
-        fontSize(40.0f);
+        fontSize(14.0f);
         textAlign(Align(ALIGN_LEFT|ALIGN_TOP));
-        textBoxBounds(meterWidth*2,widthOfStroke, getWidth()-(meterWidth*2)-widthOfStroke, "Hello World! This should be enough to wrap and wrap and wrap", NULL, bounds);
-        rect(bounds[0], bounds[1], (int)(bounds[2]-bounds[0]), (int)(bounds[3]-bounds[1]));
+        textBoxBounds((meterWidth*2)+midiMsgTextGutter, midiMsgTextGutter+widthOfStroke, getWidth()-(meterWidth*2)-(widthOfStroke)-(midiMsgTextGutter*2), text, NULL, bounds);
+        rect(bounds[0]-midiMsgTextGutter, bounds[1]-midiMsgTextGutter, getWidth()-(meterWidth*2), getHeight()-widthOfStroke);
         fill();
         stroke();
         fillColor(kColorCarbon);
-        textBox((meterWidth*2)+(widthOfStroke*2), widthOfStroke*2, getWidth()-20, "Hello World! This should be enough to wrap and wrap and wrap", nullptr);
-        //textLineHeight(20.0f);
-        // textBox((meterWidth*2)+(widthOfStroke*2), widthOfStroke*2, getWidth()-20, "Hello World! This should be enough to wrap and wrap and wrap", nullptr);
+        textBox(bounds[0], bounds[1], (int)(bounds[2]-bounds[0]), text, nullptr);
         closePath();
-
-        // fontSize(40.0f);
-        // textAlign(Align(ALIGN_CENTER|ALIGN_MIDDLE));
-        // textLineHeight(20.0f);
-
-        // beginPath();
-        // fillColor(220,220,220,255);
-        // roundedRect(10, getHeight()/4+10, getWidth()-20, getHeight()/2-20, 3);
-        // fill();
-
-        // fillColor(0,200,0,220);
-        // textBox(10, getHeight()/2, getWidth()-20, "Hello World!", nullptr);
+        restore();
 
     }
 
