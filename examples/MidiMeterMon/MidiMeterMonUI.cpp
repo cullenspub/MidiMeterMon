@@ -39,7 +39,8 @@ public:
     MidiMeterMonUI()
         : UI(500, 200, true),
           // default color is green
-          fColor(93, 231, 61)
+          fColor(93, 231, 61),
+          fontId (createFontFromFile("sans", "../examples/MidiMeterMon/resources/fonts/DroidSansMono.ttf"))
     {
         std::memset(fParameterOutputs,0,sizeof(float)*cParameterCount);
     }
@@ -204,14 +205,35 @@ protected:
         closePath();
 
         // paint Midi Message background
+        float bounds[4];
         beginPath();
-        rect(meterWidth*2, widthOfStroke, getWidth()-(meterWidth*2)-widthOfStroke, getHeight()-widthOfStroke);
+
         fillColor(kColorSmoke);
         strokeColor(kColorCarbon);
         strokeWidth(widthOfStroke);
+        fontSize(40.0f);
+        textAlign(Align(ALIGN_LEFT|ALIGN_TOP));
+        textBoxBounds(meterWidth*2,widthOfStroke, getWidth()-(meterWidth*2)-widthOfStroke, "Hello World! This should be enough to wrap and wrap and wrap", NULL, bounds);
+        rect(bounds[0], bounds[1], (int)(bounds[2]-bounds[0]), (int)(bounds[3]-bounds[1]));
         fill();
         stroke();
+        fillColor(kColorCarbon);
+        textBox((meterWidth*2)+(widthOfStroke*2), widthOfStroke*2, getWidth()-20, "Hello World! This should be enough to wrap and wrap and wrap", nullptr);
+        //textLineHeight(20.0f);
+        // textBox((meterWidth*2)+(widthOfStroke*2), widthOfStroke*2, getWidth()-20, "Hello World! This should be enough to wrap and wrap and wrap", nullptr);
         closePath();
+
+        // fontSize(40.0f);
+        // textAlign(Align(ALIGN_CENTER|ALIGN_MIDDLE));
+        // textLineHeight(20.0f);
+
+        // beginPath();
+        // fillColor(220,220,220,255);
+        // roundedRect(10, getHeight()/4+10, getWidth()-20, getHeight()/2-20, 3);
+        // fill();
+
+        // fillColor(0,200,0,220);
+        // textBox(10, getHeight()/2, getWidth()-20, "Hello World!", nullptr);
 
     }
 
@@ -222,6 +244,11 @@ private:
       Color and its matching parameter value.
     */
     Color fColor;
+
+    /**
+     * Font for midi message text
+     */
+    FontId fontId;
 
    /**
       Meter values and MIDI messages.
