@@ -14,11 +14,10 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <bitset>
-#include <queue>
 #include <iostream>
 #include <limits>
 #include "DistrhoPlugin.hpp"
+#include "MidiMeterMonUI.hpp"
 
 START_NAMESPACE_DISTRHO
 
@@ -32,10 +31,11 @@ class MidiMeterMonitorPlugin : public Plugin
 public:
     MidiMeterMonitorPlugin()
         : Plugin(cParameterCount, 0, 0),
-          fNeedsReset(true)        
-        {  
-            std::memset(fParameters,0,sizeof(float)*cParameterCount);
-        }
+          fNeedsReset(true),
+          fParameters { }
+          {
+
+          }
 
 protected:
    /* --------------------------------------------------------------------------------------------------------
@@ -165,15 +165,6 @@ protected:
         }
     }
 
-   /**
-      Set a state key and default value.
-      This function will be called once, shortly after the plugin is created.
-    */
-    void initState(uint32_t, String&, String&) override
-    {
-        // we are using states but don't want them saved in the host
-    }
-
     float getParameterValue(uint32_t index) const   override 
     { 
         switch (index) 
@@ -193,17 +184,6 @@ protected:
      * Will not be used (I think)
      */
     void  setParameterValue(uint32_t, float)  override {}
-
-   /**
-      Change an internal state.
-    */
-    void setState(const char* key, const char*) override
-    {
-        if (std::strcmp(key, "reset") != 0)
-            return;
-
-        fNeedsReset = true;
-    }
 
    /* --------------------------------------------------------------------------------------------------------
     * Audio/MIDI Processing */
@@ -268,16 +248,9 @@ protected:
         //Exit if nothing to do
         if (midiEventCount == 0) return;
 
-        //Popululate queue with existing messages
-        std::deque<float> messageQueue;
-        for (uint8_t pcount = 2; pcount < (MIDI_PARAMETER_COUNT + 2); pcount++)
-        {
-            messageQueue.push_back(fParameters[pcount]);
-        }
-
         //Variables used for type punning a midi message as a float 
         uint8_t messageBytes[sizeof(float)] = {0};
-        float messagePacked = {0};
+        float messagePacked = { };
 
         //Convert midi messages to float parameters the UI can consume
         for (uint32_t i = 0; i < midiEventCount; i++)
@@ -291,21 +264,23 @@ protected:
                 }
                 messagePacked = reinterpret_cast<float&>(messageBytes);
 
-                //Push new message onto the queue
-                messageQueue.push_front(messagePacked);
+                //Slide existing messages down
+                for (uint8_t pcount = MIDI_PARAMETER_OFFSET + MIDI_PARAMETER_COUNT - 1; pcount > MIDI_PARAMETER_OFFSET; pcount--) 
+                {
+                    fParameters[pcount] = fParameters[pcount - 1];
+                }
+                // Add new event at the top
+                fParameters[MIDI_PARAMETER_OFFSET] = messagePacked;
 
                 #if defined(VERBOSE_LOGGING)
                 auto bytesFromPun = reinterpret_cast<uint8_t*>(&messagePacked);
-                std::cout << "[" << std::bitset<8>(bytesFromPun[0]) << "]"  
-                         << " [0x" << std::hex << ((bytesFromPun[0] & 0xF0)>>4) << std::hex << (bytesFromPun[0] & 0x0F) << "]" 
+                std::cout << "[0x" << std::hex << ((bytesFromPun[0] & 0xF0)>>4) << std::hex << (bytesFromPun[0] & 0x0F) << "]" 
                          << " [" << std::dec << (uint32_t)bytesFromPun[0] << "]" ;     
-                std::cout << " [" << std::bitset<8>(bytesFromPun[1]) << "]" 
-                         << " [0x" << std::hex << ((bytesFromPun[1] & 0xF0)>>4) << std::hex << (bytesFromPun[1] & 0x0F) << "]"
+                std::cout << "[0x" << std::hex << ((bytesFromPun[1] & 0xF0)>>4) << std::hex << (bytesFromPun[1] & 0x0F) << "]"
                          << " [" << std::dec << (uint32_t)bytesFromPun[1] << "]";     
                 if (midiEvents[i].size > 2) 
                 {
-                    std::cout << " [" << std::bitset<8>(bytesFromPun[2]) << "]" 
-                            << " [0x" << std::hex << ((bytesFromPun[2] & 0xF0)>>4) << std::hex << (bytesFromPun[2] & 0x0F) << "]"
+                    std::cout << "[0x" << std::hex << ((bytesFromPun[2] & 0xF0)>>4) << std::hex << (bytesFromPun[2] & 0x0F) << "]"
                             << " [" << std::dec << (uint32_t)bytesFromPun[2] << "]";     
                 }             
                 std::cout << std::endl;   
@@ -314,15 +289,9 @@ protected:
             writeMidiEvent(midiEvents[i]);
             
         }
-        //Put as many packed messages into the parameter list as it will hold. 
-        for (uint8_t pcount = 2; pcount < MIDI_PARAMETER_COUNT + 2; pcount++)
-        {
-            fParameters[pcount] = messageQueue.front();
-            messageQueue.pop_front();
-        }
         #if defined(VERBOSE_LOGGING)
         std::cout << "fParameters: ";
-        for (uint8_t pcount = 2; pcount < MIDI_PARAMETER_COUNT + 2; pcount++)
+        for (uint8_t pcount = MIDI_PARAMETER_OFFSET; pcount < cParameterCount; pcount++)
         {
             std::cout << fParameters[pcount] << " "; 
         }
@@ -333,16 +302,16 @@ protected:
    // -------------------------------------------------------------------------------------------------------
 
 private:
-    /**
-     * Parameters
-     */
-    float fParameters[cParameterCount];
-
    /**
       Boolean used to reset meter values.
       The UI will send a "reset" message which sets this as true.
     */
     volatile bool fNeedsReset;
+
+    /**
+     * Parameters
+     */
+    volatile float fParameters[cParameterCount];
 
    /**
       Set our plugin class as non-copyable and add a leak detector just in case.

@@ -27,22 +27,7 @@
 #define DISTRHO_PLUGIN_NUM_OUTPUTS      2
 #define DISTRHO_PLUGIN_WANT_MIDI_INPUT  1
 #define DISTRHO_PLUGIN_WANT_MIDI_OUTPUT 1
-#define DISTRHO_PLUGIN_WANT_STATE       1
+#define DISTRHO_PLUGIN_WANT_STATE       0
 #define DISTRHO_UI_USE_NANOVG           1
-
-// Shared DSP and UI elements
-
-enum Parameters {
-    cParameterOutLeft = 0,
-    cParameterOutRight,
-    cParameterMidiMessage1,
-    cParameterMidiMessage2,
-    cParameterMidiMessage3,
-    cParameterMidiMessage4,
-    cParameterCount
-};
-
-#define MIDI_PARAMETER_COUNT (cParameterCount-2)
-
 
 #endif // DISTRHO_PLUGIN_MIDIMETERMON_H_INCLUDED
